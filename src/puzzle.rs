@@ -53,10 +53,10 @@ impl FromStr for PuzzleState {
         let matrix = s
             .lines()
             .map(|line| {
-                line.chars()
+                line.split(' ')
                     .map(|c| {
-                        c.to_digit(10)
-                            .ok_or_else(|| anyhow::anyhow!("Invalid character"))
+                        c.parse::<u32>()
+                            .map_err(|_| anyhow::anyhow!("Invalid character"))
                     })
                     .collect::<Result<Vec<u32>>>()
             })
@@ -124,7 +124,7 @@ mod tests {
 
     #[test]
     fn puzzle_state_from_str() {
-        let state = PuzzleState::from_str("012\n345\n678").unwrap();
+        let state = PuzzleState::from_str("0 1 2\n3 4 5\n6 7 8").unwrap();
         assert_eq!(
             state.matrix,
             vec![vec![0, 1, 2], vec![3, 4, 5], vec![6, 7, 8]]
@@ -133,11 +133,27 @@ mod tests {
 
     #[test]
     fn puzzle_state_from_string() {
-        let data: String = String::from("n678\n345\n012");
+        let data: String = String::from("6 7 8\n3 4 5\n0 1 2");
         let state = PuzzleState::from_str(&data).unwrap();
         assert_eq!(
             state.matrix,
             vec![vec![6, 7, 8], vec![3, 4, 5], vec![0, 1, 2]]
+        );
+    }
+
+    #[test]
+    fn puzzle_state_rank_4() {
+        let data = ["0 1 2 3", "4 5 6 7", "8 9 10 11", "12 13 14 15"].join("\n");
+
+        let state = PuzzleState::from_str(&data).unwrap();
+        assert_eq!(
+            state.matrix,
+            vec![
+                vec![0, 1, 2, 3],
+                vec![4, 5, 6, 7],
+                vec![8, 9, 10, 11],
+                vec![12, 13, 14, 15]
+            ]
         );
     }
 
@@ -150,10 +166,10 @@ mod tests {
     #[test]
     fn expect_err_if_input_not_square() {
         [
-            "012\n345\n6789",
-            "012\n345\n67",
-            "012\n345",
-            "012\n345\n678\n9",
+            "0 1 2\n3 4 5\n6 7 8 9",
+            "0 1 2\n3 4 5\n6 7",
+            "0 1 2\n3 4 5",
+            "0 1 2\n3 4 5\n6 7 8 \n9",
         ]
         .map(|d| PuzzleState::from_str(d))
         .iter()
@@ -163,10 +179,10 @@ mod tests {
     #[test]
     fn expect_err_if_cells_not_valid() {
         [
-            "000\n000\n000",
-            "012\n345\n679",
-            "123\n456\n789",
-            "456\n456\n789",
+            "0 0 0\n0 0 0\n0 0 0",
+            "0 1 2\n3 4 5\n6 7 9",
+            "1 2 3\n4 5 6\n7 8 9",
+            "14 5 6\n4 5 6\n7 8 9",
         ]
         .map(|d| PuzzleState::from_str(d))
         .iter()
