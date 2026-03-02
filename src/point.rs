@@ -1,6 +1,6 @@
 use num::Signed;
 
-struct Point<T>
+pub struct Point<T>
 where
     T: Signed,
 {
@@ -8,7 +8,7 @@ where
     pub y: T,
 }
 
-impl<T> Point
+impl<T> Point<T>
 where
     T: Signed,
 {
@@ -23,5 +23,14 @@ where
 {
     fn from((x, y): (T, T)) -> Self {
         Self { x, y }
+    }
+}
+
+impl<T> Into<(T, T)> for Point<T>
+where
+    T: Signed,
+{
+    fn into(self) -> (T, T) {
+        (self.x, self.y)
     }
 }
