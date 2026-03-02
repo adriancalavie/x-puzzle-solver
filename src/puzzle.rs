@@ -1,6 +1,6 @@
-use std::{collections::HashSet, str::FromStr};
-
+use anyhow::{Result, bail};
 use num::{Num, ToPrimitive};
+use std::{collections::HashSet, str::FromStr};
 
 pub struct Puzzle {
     pub state: PuzzleState,
@@ -25,17 +25,29 @@ pub struct PuzzleState {
 }
 
 impl PuzzleState {
-    pub fn new(matrix: Vec<Vec<u32>>) -> Self {
-        Self {
+    pub fn new(matrix: Vec<Vec<u32>>) -> Result<Self> {
+        if is_any_empty(&matrix) {
+            bail!("Matrix is empty or has empty rows.");
+        }
+
+        if !is_square(&matrix) {
+            bail!("Matrix should be square shaped.");
+        }
+
+        if !has_valid_cells(&matrix) {
+            bail!("Matrix should have values between 0 and (rank^2)-1");
+        }
+
+        Ok(Self {
             matrix,
             cost_so_far: 0,
             move_counter: 0,
-        }
+        })
     }
 }
 
 impl FromStr for PuzzleState {
-    type Err = String;
+    type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let matrix = s
@@ -44,22 +56,30 @@ impl FromStr for PuzzleState {
                 line.chars()
                     .map(|c| {
                         c.to_digit(10)
-                            .ok_or_else(|| "Invalid character".to_string())
+                            .ok_or_else(|| anyhow::anyhow!("Invalid character"))
                     })
-                    .collect::<Result<Vec<u32>, _>>()
+                    .collect::<Result<Vec<u32>>>()
             })
-            .collect::<Result<Vec<Vec<u32>>, _>>()?;
+            .collect::<Result<Vec<Vec<u32>>>>()?;
 
-        if !is_square(&matrix) {
-            return Err("Matrix should be square shaped".to_string());
-        }
-
-        if !has_valid_cells(&matrix) {
-            return Err("Matrix should have values between 0 and (rank^2)-1".to_string());
-        }
-
-        Ok(Self::new(matrix))
+        PuzzleState::new(matrix)
     }
+}
+
+fn is_any_empty<T>(matrix: &[Vec<T>]) -> bool
+where
+    T: Num,
+{
+    if matrix.is_empty() {
+        return true;
+    }
+    for line in matrix {
+        if line.is_empty() {
+            return true;
+        }
+    }
+
+    false
 }
 
 fn is_square<T>(matrix: &[Vec<T>]) -> bool
@@ -98,15 +118,58 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::str::FromStr;
+
+    use super::PuzzleState;
+
+    #[test]
+    fn puzzle_state_from_str() {
+        let state = PuzzleState::from_str("012\n345\n678").unwrap();
+        assert_eq!(
+            state.matrix,
+            vec![vec![0, 1, 2], vec![3, 4, 5], vec![6, 7, 8]]
+        );
+    }
 
     #[test]
     fn puzzle_state_from_string() {
-        let data = "123\n456\n789";
-        let state = PuzzleState::from_str(data).unwrap();
+        let data: String = String::from("n678\n345\n012");
+        let state = PuzzleState::from_str(&data).unwrap();
         assert_eq!(
             state.matrix,
-            vec![vec![1, 2, 3], vec![4, 5, 6], vec![7, 8, 9]]
+            vec![vec![6, 7, 8], vec![3, 4, 5], vec![0, 1, 2]]
         );
+    }
+
+    #[test]
+    fn expect_err_if_input_empty() {
+        let state = PuzzleState::from_str("");
+        assert!(state.is_err_and(|e| e.to_string().eq("Matrix is empty or has empty rows.")));
+    }
+
+    #[test]
+    fn expect_err_if_input_not_square() {
+        [
+            "012\n345\n6789",
+            "012\n345\n67",
+            "012\n345",
+            "012\n345\n678\n9",
+        ]
+        .map(|d| PuzzleState::from_str(d))
+        .iter()
+        .for_each(|res| assert!(res.is_err()));
+    }
+
+    #[test]
+    fn expect_err_if_cells_not_valid() {
+        [
+            "000\n000\n000",
+            "012\n345\n679",
+            "123\n456\n789",
+            "456\n456\n789",
+        ]
+        .map(|d| PuzzleState::from_str(d))
+        .iter()
+        .for_each(|res| assert!(res.is_err()));
     }
 }
