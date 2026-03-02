@@ -1,28 +1,6 @@
-use anyhow::{Context, Ok, Result, bail};
+use anyhow::{Ok, Result, bail};
 use num::{Num, ToPrimitive};
-use std::{collections::HashSet, str::FromStr};
-
-pub struct Puzzle {
-    pub state: PuzzleState,
-    pub previous_states: Vec<PuzzleState>,
-    pub rank: u8,
-}
-
-impl Puzzle {
-    pub fn new(matrix: Vec<Vec<u32>>, rank: u8) -> Result<Self> {
-        let state = PuzzleState::new(matrix)?;
-
-        if !rank_matches_matrix(&state.matrix, rank)? {
-            bail!("Rank does not match matrix shape.");
-        }
-
-        Ok(Self {
-            state,
-            previous_states: Vec::new(),
-            rank,
-        })
-    }
-}
+use std::{collections::HashSet, fmt::Display, str::FromStr};
 
 pub struct PuzzleState {
     pub matrix: Vec<Vec<u32>>,
@@ -49,6 +27,20 @@ impl PuzzleState {
             cost_so_far: 0,
             move_counter: 0,
         })
+    }
+}
+
+impl Display for PuzzleState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for row in &self.matrix {
+            for cell in row {
+                write!(f, "{} ", cell)?;
+            }
+            writeln!(f)?;
+        }
+        writeln!(f, "Cost so far: {}", &self.cost_so_far)?;
+        write!(f, "Move counter: {}", &self.move_counter)?;
+        std::result::Result::Ok(())
     }
 }
 
@@ -120,22 +112,6 @@ where
     }
 
     seen.len() == total
-}
-
-fn rank_matches_matrix<T>(matrix: &[Vec<T>], rank: u8) -> Result<bool>
-where
-    T: Num,
-{
-    let row_count = matrix.len();
-    let col_count = matrix.first().unwrap().len();
-
-    let rank_usize = rank.to_usize().with_context(|| "Rank too high")?;
-
-    if row_count != rank_usize || col_count != rank_usize {
-        return Ok(false);
-    }
-
-    Ok(true)
 }
 
 #[cfg(test)]
