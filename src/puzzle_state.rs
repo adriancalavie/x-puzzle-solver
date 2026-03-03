@@ -1,4 +1,4 @@
-use anyhow::{Ok, Result, bail};
+use anyhow::{Context, Ok, Result, anyhow, bail};
 use num::{Num, ToPrimitive};
 use std::{collections::HashSet, fmt::Display, str::FromStr};
 
@@ -6,6 +6,7 @@ pub struct PuzzleState {
     pub matrix: Vec<Vec<u32>>,
     pub cost_so_far: u16,
     pub move_counter: u16,
+    pub rank: u8,
 }
 
 impl PuzzleState {
@@ -22,10 +23,20 @@ impl PuzzleState {
             bail!("Matrix should have values between 0 and (rank^2)-1");
         }
 
+        let inferred_rank = matrix
+            .len()
+            .to_u8()
+            .ok_or_else(|| anyhow!("Can't convert matrix size to u8"))?;
+
+        if !rank_matches_matrix(&matrix, inferred_rank)? {
+            bail!("Rank does not match matrix shape.");
+        }
+
         Ok(Self {
             matrix,
             cost_so_far: 0,
             move_counter: 0,
+            rank: inferred_rank,
         })
     }
 }
@@ -38,8 +49,10 @@ impl Display for PuzzleState {
             }
             writeln!(f)?;
         }
+        writeln!(f, "Rank: {}", &self.rank)?;
         writeln!(f, "Cost so far: {}", &self.cost_so_far)?;
         write!(f, "Move counter: {}", &self.move_counter)?;
+
         std::result::Result::Ok(())
     }
 }
@@ -94,16 +107,19 @@ where
     true
 }
 
+/// Checks if:
+///  - all elements are between zero and (flat_matrix_size - 1)
+///  - appear at most once (actually, only once)
 fn has_valid_cells<T>(matrix: &[Vec<T>]) -> bool
 where
     T: Num + PartialOrd + ToPrimitive,
 {
-    let total = matrix.iter().map(|r| r.len()).sum::<usize>();
-    let mut seen = HashSet::with_capacity(total);
+    let flat_size = matrix.iter().map(|r| r.len()).sum::<usize>();
+    let mut seen = HashSet::with_capacity(flat_size);
 
     for v in matrix.iter().flatten() {
         let idx = match v.to_usize() {
-            Some(i) if i < total => i,
+            Some(i) if i < flat_size => i,
             _ => return false,
         };
         if !seen.insert(idx) {
@@ -111,7 +127,23 @@ where
         }
     }
 
-    seen.len() == total
+    seen.len() == flat_size
+}
+
+fn rank_matches_matrix<T>(matrix: &[Vec<T>], rank: u8) -> Result<bool>
+where
+    T: Num,
+{
+    let row_count = matrix.len();
+    let col_count = matrix.first().unwrap().len();
+
+    let rank_usize = rank.to_usize().with_context(|| "Rank too high")?;
+
+    if row_count != rank_usize || col_count != rank_usize {
+        return Ok(false);
+    }
+
+    Ok(true)
 }
 
 #[cfg(test)]
