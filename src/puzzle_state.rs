@@ -1,16 +1,18 @@
-use anyhow::{Context, Ok, Result, anyhow, bail};
-use num::{Num, ToPrimitive};
+use anyhow::{Result, anyhow, bail};
 use std::{collections::HashSet, fmt::Display, str::FromStr};
 
+use crate::Rank;
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PuzzleState {
-    pub matrix: Vec<Vec<u32>>,
-    pub cost_so_far: u16,
-    pub move_counter: u16,
-    pub rank: u8,
+    pub matrix: Vec<Vec<i32>>,
+    pub cost_so_far: i32,
+    pub move_counter: i32,
+    pub rank: Rank,
 }
 
 impl PuzzleState {
-    pub fn new(matrix: Vec<Vec<u32>>) -> Result<Self> {
+    pub fn new(matrix: Vec<Vec<i32>>) -> Result<Self> {
         if is_any_empty(&matrix) {
             bail!("Matrix is empty or has empty rows.");
         }
@@ -23,12 +25,12 @@ impl PuzzleState {
             bail!("Matrix should have values between 0 and (rank^2)-1");
         }
 
-        let inferred_rank = matrix
+        let inferred_rank: Rank = matrix
             .len()
-            .to_u8()
-            .ok_or_else(|| anyhow!("Can't convert matrix size to u8"))?;
+            .try_into()
+            .map_err(|e| anyhow!("Can't convert to Rank: {e}"))?;
 
-        if !rank_matches_matrix(&matrix, inferred_rank)? {
+        if !rank_matches_matrix(&matrix, inferred_rank.into())? {
             bail!("Rank does not match matrix shape.");
         }
 
@@ -65,22 +67,16 @@ impl FromStr for PuzzleState {
             .lines()
             .map(|line| {
                 line.split(' ')
-                    .map(|c| {
-                        c.parse::<u32>()
-                            .map_err(|_| anyhow::anyhow!("Invalid character"))
-                    })
-                    .collect::<Result<Vec<u32>>>()
+                    .map(|c| c.parse::<i32>().map_err(|_| anyhow!("Invalid character")))
+                    .collect::<Result<Vec<i32>>>()
             })
-            .collect::<Result<Vec<Vec<u32>>>>()?;
+            .collect::<Result<Vec<Vec<i32>>>>()?;
 
         PuzzleState::new(matrix)
     }
 }
 
-fn is_any_empty<T>(matrix: &[Vec<T>]) -> bool
-where
-    T: Num,
-{
+fn is_any_empty(matrix: &[Vec<i32>]) -> bool {
     if matrix.is_empty() {
         return true;
     }
@@ -93,10 +89,7 @@ where
     false
 }
 
-fn is_square<T>(matrix: &[Vec<T>]) -> bool
-where
-    T: Num,
-{
+fn is_square(matrix: &[Vec<i32>]) -> bool {
     let lines_count = matrix.len();
     for line in matrix {
         if line.len() != lines_count {
@@ -110,36 +103,28 @@ where
 /// Checks if:
 ///  - all elements are between zero and (flat_matrix_size - 1)
 ///  - appear at most once (actually, only once)
-fn has_valid_cells<T>(matrix: &[Vec<T>]) -> bool
-where
-    T: Num + PartialOrd + ToPrimitive,
-{
+fn has_valid_cells(matrix: &[Vec<i32>]) -> bool {
     let flat_size = matrix.iter().map(|r| r.len()).sum::<usize>();
     let mut seen = HashSet::with_capacity(flat_size);
 
     for v in matrix.iter().flatten() {
-        let idx = match v.to_usize() {
-            Some(i) if i < flat_size => i,
+        let idx = match usize::try_from(*v) {
+            Ok(i) if i < flat_size => i,
             _ => return false,
         };
         if !seen.insert(idx) {
-            return false; // duplicate
+            return false;
         }
     }
 
     seen.len() == flat_size
 }
 
-fn rank_matches_matrix<T>(matrix: &[Vec<T>], rank: u8) -> Result<bool>
-where
-    T: Num,
-{
+fn rank_matches_matrix(matrix: &[Vec<i32>], rank: usize) -> Result<bool> {
     let row_count = matrix.len();
     let col_count = matrix.first().unwrap().len();
 
-    let rank_usize = rank.to_usize().with_context(|| "Rank too high")?;
-
-    if row_count != rank_usize || col_count != rank_usize {
+    if row_count != rank || col_count != rank {
         return Ok(false);
     }
 

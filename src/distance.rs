@@ -1,15 +1,8 @@
-use num::{Signed, abs};
-
 use crate::point::Point;
 
-pub fn manhattan_distance<T>(p1: Point<T>, p2: Point<T>) -> T
-where
-    T: Signed,
-{
-    let (x1, y1) = p1.into();
-    let (x2, y2) = p2.into();
-
-    abs(x1 - x2) + abs(y1 - y2)
+/// Computes the manhattan distance between two points
+pub fn manhattan_distance(p1: Point, p2: Point) -> i32 {
+    (p1.x - p2.x).abs() + (p1.y - p2.y).abs()
 }
 
 #[cfg(test)]
