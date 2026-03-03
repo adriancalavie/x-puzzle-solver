@@ -6,7 +6,6 @@ use num::{Num, ToPrimitive};
 use crate::puzzle_state::PuzzleState;
 
 pub(crate) mod distance;
-pub(crate) mod parser;
 pub(crate) mod point;
 pub(crate) mod puzzle_state;
 pub(crate) mod utils;
