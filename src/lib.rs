@@ -4,10 +4,14 @@ use anyhow::Result;
 
 use crate::puzzle_state::PuzzleState;
 
+pub(crate) mod direction;
 pub(crate) mod distance;
 pub(crate) mod point;
 pub(crate) mod puzzle_state;
 pub(crate) mod utils;
+
+pub(crate) use direction::Direction;
+pub(crate) use point::Point;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Puzzle {

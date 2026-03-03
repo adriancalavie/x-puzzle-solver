@@ -1,28 +1,11 @@
 use std::ops::{Add, AddAssign};
 
+use crate::Direction;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Point {
     pub x: i32,
     pub y: i32,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum Direction {
-    UP,
-    DOWN,
-    LEFT,
-    RIGHT,
-}
-
-impl Direction {
-    fn value(&self) -> Point {
-        match self {
-            Direction::UP => Point { x: 0, y: 1 },
-            Direction::DOWN => Point { x: 0, y: -1 },
-            Direction::LEFT => Point { x: -1, y: 0 },
-            Direction::RIGHT => Point { x: 1, y: 0 },
-        }
-    }
 }
 
 impl Point {
