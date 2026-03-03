@@ -1,14 +1,17 @@
 use anyhow::{Result, anyhow, bail};
 use std::{collections::HashSet, fmt::Display, str::FromStr};
 
-use crate::Rank;
+use crate::{Direction, Point, Rank, utils::clamp};
+
+const EMPTY_SYMBOL: i32 = 0;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PuzzleState {
-    pub matrix: Vec<Vec<i32>>,
     pub cost_so_far: i32,
     pub move_counter: i32,
     pub rank: Rank,
+    matrix: Vec<Vec<i32>>,
+    empty_pos: Point,
 }
 
 impl PuzzleState {
@@ -34,12 +37,30 @@ impl PuzzleState {
             bail!("Rank does not match matrix shape.");
         }
 
+        let empty_pos = extract_empty_tile(&matrix, inferred_rank)?;
+
         Ok(Self {
             matrix,
             cost_so_far: 0,
             move_counter: 0,
             rank: inferred_rank,
+            empty_pos,
         })
+    }
+
+    pub fn move_empty_tile_to(&mut self, direction: Direction) {
+        let new_tile_pos = self.in_bounds(self.empty_pos.moved(direction));
+
+        if new_tile_pos.eq(&self.empty_pos) {
+            return;
+        }
+    }
+
+    fn in_bounds(&self, pos: Point) -> Point {
+        Point {
+            x: clamp(pos.x, 0, i32::from(self.rank) - 1),
+            y: clamp(pos.y, 0, i32::from(self.rank) - 1),
+        }
     }
 }
 
@@ -53,6 +74,7 @@ impl Display for PuzzleState {
         }
         writeln!(f, "Rank: {}", &self.rank)?;
         writeln!(f, "Cost so far: {}", &self.cost_so_far)?;
+        writeln!(f, "Empty tile: {}", &self.empty_pos)?;
         write!(f, "Move counter: {}", &self.move_counter)?;
 
         std::result::Result::Ok(())
@@ -74,6 +96,31 @@ impl FromStr for PuzzleState {
 
         PuzzleState::new(matrix)
     }
+}
+
+fn extract_empty_tile(matrix: &[Vec<i32>], rank: Rank) -> Result<Point> {
+    let rank_usize = usize::from(rank);
+
+    matrix
+        .iter()
+        .flatten()
+        .enumerate()
+        .find_map(|(idx, cell)| {
+            if *cell == EMPTY_SYMBOL {
+                let x = idx % rank_usize;
+                let y = idx / rank_usize;
+                Some((x, y))
+            } else {
+                None
+            }
+        })
+        .map(|(x, y)| {
+            let x = i32::try_from(x).map_err(|_| anyhow!("X too large for i32"))?;
+            let y = i32::try_from(y).map_err(|_| anyhow!("Y too large for i32"))?;
+            anyhow::Ok(Point::new(x, y))
+        })
+        .transpose()?
+        .ok_or_else(|| anyhow!("Empty tile couldn't be found in the matrix"))
 }
 
 fn is_any_empty(matrix: &[Vec<i32>]) -> bool {
@@ -107,8 +154,8 @@ fn has_valid_cells(matrix: &[Vec<i32>]) -> bool {
     let flat_size = matrix.iter().map(|r| r.len()).sum::<usize>();
     let mut seen = HashSet::with_capacity(flat_size);
 
-    for v in matrix.iter().flatten() {
-        let idx = match usize::try_from(*v) {
+    for cell in matrix.iter().flatten() {
+        let idx = match usize::try_from(*cell) {
             Ok(i) if i < flat_size => i,
             _ => return false,
         };
@@ -135,6 +182,8 @@ fn rank_matches_matrix(matrix: &[Vec<i32>], rank: usize) -> Result<bool> {
 mod tests {
     use std::str::FromStr;
 
+    use crate::Point;
+
     use super::PuzzleState;
 
     #[test]
@@ -144,6 +193,7 @@ mod tests {
             state.matrix,
             vec![vec![0, 1, 2], vec![3, 4, 5], vec![6, 7, 8]]
         );
+        assert_eq!(state.empty_pos, Point::from((0, 0)));
     }
 
     #[test]
@@ -154,6 +204,7 @@ mod tests {
             state.matrix,
             vec![vec![6, 7, 8], vec![3, 4, 5], vec![0, 1, 2]]
         );
+        assert_eq!(state.empty_pos, Point::from((0, 2)));
     }
 
     #[test]
@@ -170,6 +221,7 @@ mod tests {
                 vec![12, 13, 14, 15]
             ]
         );
+        assert_eq!(state.empty_pos, Point::from((0, 0)));
     }
 
     #[test]

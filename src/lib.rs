@@ -101,3 +101,9 @@ impl From<Rank> for usize {
         rank as usize
     }
 }
+
+impl From<Rank> for i32 {
+    fn from(rank: Rank) -> i32 {
+        rank as i32
+    }
+}

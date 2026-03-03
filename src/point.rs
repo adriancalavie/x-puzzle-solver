@@ -1,4 +1,7 @@
-use std::ops::{Add, AddAssign};
+use std::{
+    fmt::Display,
+    ops::{Add, AddAssign},
+};
 
 use crate::Direction;
 
@@ -21,7 +24,7 @@ impl Point {
         self + direction.value()
     }
 
-    fn zero() -> Self {
+    pub fn zero() -> Self {
         Self { x: 0, y: 0 }
     }
 }
@@ -29,6 +32,14 @@ impl Point {
 impl Default for Point {
     fn default() -> Self {
         Self::zero()
+    }
+}
+
+impl Display for Point {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[{},{}]", self.x, self.y)?;
+
+        std::result::Result::Ok(())
     }
 }
 
