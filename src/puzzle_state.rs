@@ -1,7 +1,7 @@
 use anyhow::{Result, anyhow, bail};
 use std::{collections::HashSet, fmt::Display, str::FromStr};
 
-use crate::{Direction, Point, Rank, utils::clamp};
+use crate::{Direction, Grid, Point, Rank, utils::clamp};
 
 const EMPTY_SYMBOL: i32 = 0;
 
@@ -10,7 +10,7 @@ pub struct PuzzleState {
     pub cost_so_far: i32,
     pub move_counter: i32,
     pub rank: Rank,
-    matrix: Vec<Vec<i32>>,
+    grid: Grid,
     empty_pos: Point,
 }
 
@@ -40,7 +40,7 @@ impl PuzzleState {
         let empty_pos = extract_empty_tile(&matrix, inferred_rank)?;
 
         Ok(Self {
-            matrix,
+            grid: matrix.into(),
             cost_so_far: 0,
             move_counter: 0,
             rank: inferred_rank,
@@ -54,6 +54,8 @@ impl PuzzleState {
         if new_tile_pos.eq(&self.empty_pos) {
             return;
         }
+
+        // let cell_value = self.grid[new_tile_pos.x][new_tile_pos.y];
     }
 
     fn in_bounds(&self, pos: Point) -> Point {
@@ -66,12 +68,7 @@ impl PuzzleState {
 
 impl Display for PuzzleState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for row in &self.matrix {
-            for cell in row {
-                write!(f, "{} ", cell)?;
-            }
-            writeln!(f)?;
-        }
+        write!(f, "{}", &self.grid)?;
         writeln!(f, "Rank: {}", &self.rank)?;
         writeln!(f, "Cost so far: {}", &self.cost_so_far)?;
         writeln!(f, "Empty tile: {}", &self.empty_pos)?;
@@ -190,7 +187,7 @@ mod tests {
     fn puzzle_state_from_str() {
         let state = PuzzleState::from_str("0 1 2\n3 4 5\n6 7 8").unwrap();
         assert_eq!(
-            state.matrix,
+            state.grid.as_matrix(),
             vec![vec![0, 1, 2], vec![3, 4, 5], vec![6, 7, 8]]
         );
         assert_eq!(state.empty_pos, Point::from((0, 0)));
@@ -201,7 +198,7 @@ mod tests {
         let data: String = String::from("6 7 8\n3 4 5\n0 1 2");
         let state = PuzzleState::from_str(&data).unwrap();
         assert_eq!(
-            state.matrix,
+            state.grid.as_matrix(),
             vec![vec![6, 7, 8], vec![3, 4, 5], vec![0, 1, 2]]
         );
         assert_eq!(state.empty_pos, Point::from((0, 2)));
@@ -213,7 +210,7 @@ mod tests {
 
         let state = PuzzleState::from_str(&data).unwrap();
         assert_eq!(
-            state.matrix,
+            state.grid.as_matrix(),
             vec![
                 vec![0, 1, 2, 3],
                 vec![4, 5, 6, 7],

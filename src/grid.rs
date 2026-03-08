@@ -13,7 +13,7 @@ impl Grid {
     }
 
     pub fn as_matrix(&self) -> Vec<Vec<i32>> {
-        let mut matrix = vec![vec![0; self.cells.len()]; self.cells.len()];
+        let mut matrix = vec![vec![0; self.cells.len().isqrt()]; self.cells.len().isqrt()];
         for (_, cell) in self.cells.iter().enumerate() {
             matrix[cell.position.y as usize][cell.position.x as usize] = cell.value;
         }
