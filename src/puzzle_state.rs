@@ -1,17 +1,17 @@
 use anyhow::{Result, anyhow, bail};
 use std::{collections::HashSet, fmt::Display, str::FromStr};
 
-use crate::{Direction, Grid, Point, Rank, utils::clamp};
+use crate::{Direction, Grid, Position, Rank};
 
 const EMPTY_SYMBOL: i32 = 0;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PuzzleState {
     pub cost_so_far: i32,
-    pub move_counter: i32,
+    pub move_counter: usize,
     pub rank: Rank,
-    grid: Grid,
-    empty_pos: Point,
+    grid: Grid<i32>,
+    empty_pos: Position,
 }
 
 impl PuzzleState {
@@ -49,19 +49,21 @@ impl PuzzleState {
     }
 
     pub fn move_empty_tile_to(&mut self, direction: Direction) {
-        let new_tile_pos = self.in_bounds(self.empty_pos.moved(direction));
-
-        if new_tile_pos.eq(&self.empty_pos) {
+        let Some(new_pos) = self.try_move(self.empty_pos, direction) else {
             return;
-        }
-
-        // let cell_value = self.grid[new_tile_pos.x][new_tile_pos.y];
+        };
+        self.grid.swap_values(&self.empty_pos, &new_pos);
+        self.empty_pos = new_pos;
+        self.move_counter += 1;
     }
 
-    fn in_bounds(&self, pos: Point) -> Point {
-        Point {
-            x: clamp(pos.x, 0, i32::from(self.rank) - 1),
-            y: clamp(pos.y, 0, i32::from(self.rank) - 1),
+    fn try_move(&self, pos: Position, dir: Direction) -> Option<Position> {
+        let new_pos = (pos + dir.offset())?;
+        let rank = self.rank.into();
+        if new_pos.x < rank && new_pos.y < rank {
+            Some(new_pos)
+        } else {
+            None
         }
     }
 }
@@ -95,7 +97,7 @@ impl FromStr for PuzzleState {
     }
 }
 
-fn extract_empty_tile(matrix: &[Vec<i32>], rank: Rank) -> Result<Point> {
+fn extract_empty_tile(matrix: &[Vec<i32>], rank: Rank) -> Result<Position> {
     let rank_usize = usize::from(rank);
 
     matrix
@@ -111,11 +113,7 @@ fn extract_empty_tile(matrix: &[Vec<i32>], rank: Rank) -> Result<Point> {
                 None
             }
         })
-        .map(|(x, y)| {
-            let x = i32::try_from(x).map_err(|_| anyhow!("X too large for i32"))?;
-            let y = i32::try_from(y).map_err(|_| anyhow!("Y too large for i32"))?;
-            anyhow::Ok(Point::new(x, y))
-        })
+        .map(|(x, y)| anyhow::Ok(Position::new(x, y)))
         .transpose()?
         .ok_or_else(|| anyhow!("Empty tile couldn't be found in the matrix"))
 }
@@ -179,7 +177,7 @@ fn rank_matches_matrix(matrix: &[Vec<i32>], rank: usize) -> Result<bool> {
 mod tests {
     use std::str::FromStr;
 
-    use crate::Point;
+    use crate::{Direction, Position};
 
     use super::PuzzleState;
 
@@ -190,7 +188,7 @@ mod tests {
             state.grid.as_matrix(),
             vec![vec![0, 1, 2], vec![3, 4, 5], vec![6, 7, 8]]
         );
-        assert_eq!(state.empty_pos, Point::from((0, 0)));
+        assert_eq!(state.empty_pos, Position::from((0, 0)));
     }
 
     #[test]
@@ -201,7 +199,7 @@ mod tests {
             state.grid.as_matrix(),
             vec![vec![6, 7, 8], vec![3, 4, 5], vec![0, 1, 2]]
         );
-        assert_eq!(state.empty_pos, Point::from((0, 2)));
+        assert_eq!(state.empty_pos, Position::from((0, 2)));
     }
 
     #[test]
@@ -218,7 +216,7 @@ mod tests {
                 vec![12, 13, 14, 15]
             ]
         );
-        assert_eq!(state.empty_pos, Point::from((0, 0)));
+        assert_eq!(state.empty_pos, Position::from((0, 0)));
     }
 
     #[test]
@@ -251,5 +249,35 @@ mod tests {
         .map(|d| PuzzleState::from_str(d))
         .iter()
         .for_each(|res| assert!(res.is_err()));
+    }
+
+    #[test]
+    fn move_empty_tile() {
+        let mut state = PuzzleState::from_str("0 1 2\n3 4 5\n6 7 8").unwrap();
+
+        state.move_empty_tile_to(Direction::DOWN);
+        assert_eq!(state.empty_pos, Position::new(0, 1));
+        assert_eq!(state.move_counter, 1);
+
+        state.move_empty_tile_to(Direction::RIGHT);
+        assert_eq!(state.empty_pos, Position::new(1, 1));
+        assert_eq!(state.move_counter, 2);
+
+        state.move_empty_tile_to(Direction::RIGHT);
+        assert_eq!(state.empty_pos, Position::new(2, 1));
+        assert_eq!(state.move_counter, 3);
+    }
+
+    #[test]
+    fn out_of_bounds_move_does_nothing() {
+        let mut state = PuzzleState::from_str("0 1 2\n3 4 5\n6 7 8").unwrap();
+
+        state.move_empty_tile_to(Direction::LEFT);
+        assert_eq!(state.empty_pos, Position::new(0, 0));
+        assert_eq!(state.move_counter, 0);
+
+        state.move_empty_tile_to(Direction::UP);
+        assert_eq!(state.empty_pos, Position::new(0, 0));
+        assert_eq!(state.move_counter, 0);
     }
 }

@@ -1,27 +1,59 @@
 use std::fmt::Display;
 
-use crate::{Cell, Point};
+use crate::Position;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Grid {
-    cells: Vec<Cell<i32>>,
+pub struct Grid<T>
+where
+    T: Clone + Default + PartialEq + Eq + Display,
+{
+    data: Vec<T>,
+    rank: usize,
 }
 
-impl Grid {
-    pub fn new(cells: Vec<Cell<i32>>) -> Self {
-        Self { cells }
+impl<T> Grid<T>
+where
+    T: Clone + Default + PartialEq + Eq + Display,
+{
+    pub fn new(cells: Vec<T>, rank: usize) -> Self {
+        Self { data: cells, rank }
     }
 
-    pub fn as_matrix(&self) -> Vec<Vec<i32>> {
-        let mut matrix = vec![vec![0; self.cells.len().isqrt()]; self.cells.len().isqrt()];
-        for (_, cell) in self.cells.iter().enumerate() {
-            matrix[cell.position.y as usize][cell.position.x as usize] = cell.value;
+    pub fn as_matrix(&self) -> Vec<Vec<T>> {
+        let mut matrix = vec![vec![T::default(); self.rank]; self.rank];
+        for (idx, val) in self.data.iter().enumerate() {
+            let pos = self.index_to_pos(idx);
+            matrix[pos.y][pos.x] = val.clone();
         }
         matrix
     }
+
+    pub fn at(&self, pos: &Position) -> &T {
+        &self.data[self.index(pos)]
+    }
+
+    pub fn swap_values(&mut self, a: &Position, b: &Position) {
+        let idx_a = self.index(a);
+        let idx_b = self.index(b);
+        self.data.swap(idx_a, idx_b); // stdlib, safe, no borrow issues
+    }
+
+    fn index(&self, pos: &Position) -> usize {
+        pos.y * self.rank + pos.x
+    }
+
+    fn index_to_pos(&self, idx: usize) -> Position {
+        Position {
+            x: idx % self.rank,
+            y: idx / self.rank,
+        }
+    }
 }
 
-impl Display for Grid {
+impl<T> Display for Grid<T>
+where
+    T: Clone + Default + PartialEq + Eq + Display,
+{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for row in &self.as_matrix() {
             for cell in row {
@@ -33,24 +65,25 @@ impl Display for Grid {
     }
 }
 
-impl From<Vec<Vec<i32>>> for Grid {
-    fn from(matrix: Vec<Vec<i32>>) -> Self {
-        let cells = matrix
-            .into_iter()
-            .enumerate()
-            .flat_map(|(y, row)| {
-                row.into_iter().enumerate().map(move |(x, value)| Cell {
-                    position: Point::new(x as i32, y as i32),
-                    value,
-                })
-            })
-            .collect();
-        Self { cells }
+impl<T> From<Vec<Vec<T>>> for Grid<T>
+where
+    T: Clone + Default + PartialEq + Eq + Display,
+{
+    fn from(matrix: Vec<Vec<T>>) -> Self {
+        let rank = matrix.len();
+
+        Self {
+            data: matrix.into_iter().flatten().collect(),
+            rank,
+        }
     }
 }
 
-impl From<Grid> for Vec<Vec<i32>> {
-    fn from(grid: Grid) -> Self {
+impl<T> From<Grid<T>> for Vec<Vec<T>>
+where
+    T: Clone + Default + PartialEq + Eq + Display,
+{
+    fn from(grid: Grid<T>) -> Self {
         grid.as_matrix()
     }
 }
