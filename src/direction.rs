@@ -1,4 +1,4 @@
-use crate::Point;
+use crate::Offset;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Direction {
@@ -9,12 +9,12 @@ pub enum Direction {
 }
 
 impl Direction {
-    pub fn value(&self) -> Point {
+    pub fn offset(&self) -> Offset {
         match self {
-            Direction::UP => Point { x: 0, y: 1 },
-            Direction::DOWN => Point { x: 0, y: -1 },
-            Direction::LEFT => Point { x: -1, y: 0 },
-            Direction::RIGHT => Point { x: 1, y: 0 },
+            Direction::UP => Offset { dx: 0, dy: -1 },
+            Direction::DOWN => Offset { dx: 0, dy: 1 },
+            Direction::LEFT => Offset { dx: -1, dy: 0 },
+            Direction::RIGHT => Offset { dx: 1, dy: 0 },
         }
     }
 }
