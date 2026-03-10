@@ -57,6 +57,10 @@ impl PuzzleState {
         self.move_counter += 1;
     }
 
+    pub fn is_solved(&self) -> bool {
+        self.grid == *self.rank.get_solved()
+    }
+
     fn try_move(&self, pos: Position, dir: Direction) -> Option<Position> {
         let new_pos = (pos + dir.offset())?;
         let rank = self.rank.into();
@@ -175,109 +179,141 @@ fn rank_matches_matrix(matrix: &[Vec<i32>], rank: usize) -> Result<bool> {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
+    use super::*;
 
-    use crate::{Direction, Position};
+    mod creation_and_validation {
+        use super::*;
 
-    use super::PuzzleState;
+        #[test]
+        fn puzzle_state_from_str() {
+            let state = PuzzleState::from_str("0 1 2\n3 4 5\n6 7 8").unwrap();
+            assert_eq!(
+                state.grid.as_matrix(),
+                vec![vec![0, 1, 2], vec![3, 4, 5], vec![6, 7, 8]]
+            );
+            assert_eq!(state.empty_pos, Position::from((0, 0)));
+        }
 
-    #[test]
-    fn puzzle_state_from_str() {
-        let state = PuzzleState::from_str("0 1 2\n3 4 5\n6 7 8").unwrap();
-        assert_eq!(
-            state.grid.as_matrix(),
-            vec![vec![0, 1, 2], vec![3, 4, 5], vec![6, 7, 8]]
-        );
-        assert_eq!(state.empty_pos, Position::from((0, 0)));
-    }
+        #[test]
+        fn puzzle_state_from_string() {
+            let data: String = String::from("6 7 8\n3 4 5\n0 1 2");
+            let state = PuzzleState::from_str(&data).unwrap();
+            assert_eq!(
+                state.grid.as_matrix(),
+                vec![vec![6, 7, 8], vec![3, 4, 5], vec![0, 1, 2]]
+            );
+            assert_eq!(state.empty_pos, Position::from((0, 2)));
+        }
 
-    #[test]
-    fn puzzle_state_from_string() {
-        let data: String = String::from("6 7 8\n3 4 5\n0 1 2");
-        let state = PuzzleState::from_str(&data).unwrap();
-        assert_eq!(
-            state.grid.as_matrix(),
-            vec![vec![6, 7, 8], vec![3, 4, 5], vec![0, 1, 2]]
-        );
-        assert_eq!(state.empty_pos, Position::from((0, 2)));
-    }
+        #[test]
+        fn puzzle_state_rank_4() {
+            let data = ["0 1 2 3", "4 5 6 7", "8 9 10 11", "12 13 14 15"].join("\n");
 
-    #[test]
-    fn puzzle_state_rank_4() {
-        let data = ["0 1 2 3", "4 5 6 7", "8 9 10 11", "12 13 14 15"].join("\n");
+            let state = PuzzleState::from_str(&data).unwrap();
+            assert_eq!(
+                state.grid.as_matrix(),
+                vec![
+                    vec![0, 1, 2, 3],
+                    vec![4, 5, 6, 7],
+                    vec![8, 9, 10, 11],
+                    vec![12, 13, 14, 15]
+                ]
+            );
+            assert_eq!(state.empty_pos, Position::from((0, 0)));
+        }
 
-        let state = PuzzleState::from_str(&data).unwrap();
-        assert_eq!(
-            state.grid.as_matrix(),
-            vec![
-                vec![0, 1, 2, 3],
-                vec![4, 5, 6, 7],
-                vec![8, 9, 10, 11],
-                vec![12, 13, 14, 15]
+        #[test]
+        fn expect_err_if_input_empty() {
+            let state = PuzzleState::from_str("");
+            assert!(state.is_err_and(|e| e.to_string().eq("Matrix is empty or has empty rows.")));
+        }
+
+        #[test]
+        fn expect_err_if_input_not_square() {
+            [
+                "0 1 2\n3 4 5\n6 7 8 9",
+                "0 1 2\n3 4 5\n6 7",
+                "0 1 2\n3 4 5",
+                "0 1 2\n3 4 5\n6 7 8 \n9",
             ]
-        );
-        assert_eq!(state.empty_pos, Position::from((0, 0)));
+            .map(|d| PuzzleState::from_str(d))
+            .iter()
+            .for_each(|res| assert!(res.is_err()));
+        }
+
+        #[test]
+        fn expect_err_if_cells_not_valid() {
+            [
+                "0 0 0\n0 0 0\n0 0 0",
+                "0 1 2\n3 4 5\n6 7 9",
+                "1 2 3\n4 5 6\n7 8 9",
+                "14 5 6\n4 5 6\n7 8 9",
+            ]
+            .map(|d| PuzzleState::from_str(d))
+            .iter()
+            .for_each(|res| assert!(res.is_err()));
+        }
     }
 
-    #[test]
-    fn expect_err_if_input_empty() {
-        let state = PuzzleState::from_str("");
-        assert!(state.is_err_and(|e| e.to_string().eq("Matrix is empty or has empty rows.")));
+    mod actions {
+        use super::*;
+
+        #[test]
+        fn move_empty_tile() {
+            let mut state = PuzzleState::from_str("0 1 2\n3 4 5\n6 7 8").unwrap();
+
+            state.move_empty_tile_to(Direction::DOWN);
+            assert_eq!(state.empty_pos, Position::new(0, 1));
+            assert_eq!(state.grid.at(Position::new(0, 0)), 3);
+            assert_eq!(state.move_counter, 1);
+
+            state.move_empty_tile_to(Direction::RIGHT);
+            assert_eq!(state.empty_pos, Position::new(1, 1));
+            assert_eq!(state.grid.at(Position::new(0, 1)), 4);
+            assert_eq!(state.move_counter, 2);
+
+            state.move_empty_tile_to(Direction::RIGHT);
+            assert_eq!(state.empty_pos, Position::new(2, 1));
+            assert_eq!(state.grid.at(Position::new(1, 1)), 5);
+            assert_eq!(state.move_counter, 3);
+        }
+
+        #[test]
+        fn out_of_bounds_move_does_nothing() {
+            let mut state = PuzzleState::from_str("0 1 2\n3 4 5\n6 7 8").unwrap();
+
+            state.move_empty_tile_to(Direction::LEFT);
+            assert_eq!(state.empty_pos, Position::new(0, 0));
+            assert_eq!(state.move_counter, 0);
+
+            state.move_empty_tile_to(Direction::UP);
+            assert_eq!(state.empty_pos, Position::new(0, 0));
+            assert_eq!(state.move_counter, 0);
+        }
     }
 
-    #[test]
-    fn expect_err_if_input_not_square() {
-        [
-            "0 1 2\n3 4 5\n6 7 8 9",
-            "0 1 2\n3 4 5\n6 7",
-            "0 1 2\n3 4 5",
-            "0 1 2\n3 4 5\n6 7 8 \n9",
-        ]
-        .map(|d| PuzzleState::from_str(d))
-        .iter()
-        .for_each(|res| assert!(res.is_err()));
-    }
+    #[cfg(test)]
+    mod is_solved {
+        use super::*;
 
-    #[test]
-    fn expect_err_if_cells_not_valid() {
-        [
-            "0 0 0\n0 0 0\n0 0 0",
-            "0 1 2\n3 4 5\n6 7 9",
-            "1 2 3\n4 5 6\n7 8 9",
-            "14 5 6\n4 5 6\n7 8 9",
-        ]
-        .map(|d| PuzzleState::from_str(d))
-        .iter()
-        .for_each(|res| assert!(res.is_err()));
-    }
+        #[test]
+        fn should_be_true() {
+            let state = PuzzleState::from_str("1 2 3\n4 5 6\n7 8 0").unwrap();
+            assert!(state.is_solved())
+        }
 
-    #[test]
-    fn move_empty_tile() {
-        let mut state = PuzzleState::from_str("0 1 2\n3 4 5\n6 7 8").unwrap();
+        #[test]
+        fn should_be_false() {
+            let state = PuzzleState::from_str("1 2 3\n4 5 6\n7 0 8").unwrap();
+            assert_eq!(state.is_solved(), false)
+        }
 
-        state.move_empty_tile_to(Direction::DOWN);
-        assert_eq!(state.empty_pos, Position::new(0, 1));
-        assert_eq!(state.move_counter, 1);
+        #[test]
+        fn is_true_after_move() {
+            let mut state = PuzzleState::from_str("1 2 3\n4 5 6\n7 0 8").unwrap();
 
-        state.move_empty_tile_to(Direction::RIGHT);
-        assert_eq!(state.empty_pos, Position::new(1, 1));
-        assert_eq!(state.move_counter, 2);
-
-        state.move_empty_tile_to(Direction::RIGHT);
-        assert_eq!(state.empty_pos, Position::new(2, 1));
-        assert_eq!(state.move_counter, 3);
-    }
-
-    #[test]
-    fn out_of_bounds_move_does_nothing() {
-        let mut state = PuzzleState::from_str("0 1 2\n3 4 5\n6 7 8").unwrap();
-
-        state.move_empty_tile_to(Direction::LEFT);
-        assert_eq!(state.empty_pos, Position::new(0, 0));
-        assert_eq!(state.move_counter, 0);
-
-        state.move_empty_tile_to(Direction::UP);
-        assert_eq!(state.empty_pos, Position::new(0, 0));
-        assert_eq!(state.move_counter, 0);
+            state.move_empty_tile_to(Direction::RIGHT);
+            assert!(state.is_solved())
+        }
     }
 }

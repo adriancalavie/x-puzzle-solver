@@ -28,8 +28,8 @@ where
         matrix
     }
 
-    pub fn at(&self, pos: &Position) -> &T {
-        &self.data[self.index(pos)]
+    pub fn at(&self, pos: Position) -> T {
+        self.data[self.index(&pos)].clone()
     }
 
     pub fn swap_values(&mut self, a: &Position, b: &Position) {
@@ -85,5 +85,14 @@ where
 {
     fn from(grid: Grid<T>) -> Self {
         grid.as_matrix()
+    }
+}
+
+impl<T> PartialEq<[T]> for Grid<T>
+where
+    T: Clone + Default + PartialEq + Eq + Display,
+{
+    fn eq(&self, other: &[T]) -> bool {
+        self.data == other
     }
 }

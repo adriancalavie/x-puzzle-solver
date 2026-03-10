@@ -2,7 +2,7 @@ use std::{fmt::Display, str::FromStr};
 
 use anyhow::Result;
 
-use crate::puzzle_state::PuzzleState;
+use crate::{puzzle_state::PuzzleState, utils::SOLVED_CACHE};
 
 pub(crate) mod direction;
 pub(crate) mod distance;
@@ -66,6 +66,21 @@ pub enum Rank {
     Five = 5,
 }
 
+impl Rank {
+    fn compute_solved(&self) -> Vec<i32> {
+        let size = usize::from(self).pow(2);
+        (1..=size)
+            .map(|i| if i == size { 0 } else { i as i32 })
+            .collect()
+    }
+
+    /// lazy inits, cached reads
+    /// See [SOLVED_CACHE](crate::utils::SOLVED_CACHE) for details
+    pub fn get_solved(&self) -> &'static [i32] {
+        SOLVED_CACHE[self].get_or_init(|| self.compute_solved())
+    }
+}
+
 impl std::fmt::Display for Rank {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", *self as u8)
@@ -103,6 +118,12 @@ impl TryFrom<usize> for Rank {
 impl From<Rank> for usize {
     fn from(rank: Rank) -> usize {
         rank as usize
+    }
+}
+
+impl From<&Rank> for usize {
+    fn from(rank: &Rank) -> usize {
+        *rank as usize
     }
 }
 
