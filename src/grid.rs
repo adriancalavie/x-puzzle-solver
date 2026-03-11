@@ -2,19 +2,16 @@ use std::fmt::Display;
 
 use crate::Position;
 
+pub trait GridDataType: Clone + Default + Ord + Display {}
+impl<T: Clone + Default + Ord + Display> GridDataType for T {}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Grid<T>
-where
-    T: Clone + Default + PartialEq + Eq + Display,
-{
+pub struct Grid<T: GridDataType> {
     data: Vec<T>,
     rank: usize,
 }
 
-impl<T> Grid<T>
-where
-    T: Clone + Default + PartialEq + Eq + Display,
-{
+impl<T: GridDataType> Grid<T> {
     pub fn new(cells: Vec<T>, rank: usize) -> Self {
         Self { data: cells, rank }
     }
@@ -38,6 +35,26 @@ where
         self.data.swap(idx_a, idx_b); // stdlib, safe, no borrow issues
     }
 
+    pub fn countInversions(&self) -> usize {
+        let mut inversions = 0;
+        for (i, val) in self.data.iter().enumerate() {
+            for j in i + 1..self.data.len() {
+                if *val == T::default() {
+                    // not zero
+                    continue;
+                }
+                if self.data[j] == T::default() {
+                    // not zero
+                    continue;
+                }
+                if self.data[j] < *val {
+                    inversions += 1;
+                }
+            }
+        }
+        inversions
+    }
+
     fn index(&self, pos: &Position) -> usize {
         pos.y * self.rank + pos.x
     }
@@ -50,10 +67,7 @@ where
     }
 }
 
-impl<T> Display for Grid<T>
-where
-    T: Clone + Default + PartialEq + Eq + Display,
-{
+impl<T: GridDataType> Display for Grid<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for row in &self.as_matrix() {
             for cell in row {
@@ -65,10 +79,7 @@ where
     }
 }
 
-impl<T> From<Vec<Vec<T>>> for Grid<T>
-where
-    T: Clone + Default + PartialEq + Eq + Display,
-{
+impl<T: GridDataType> From<Vec<Vec<T>>> for Grid<T> {
     fn from(matrix: Vec<Vec<T>>) -> Self {
         let rank = matrix.len();
 
@@ -79,19 +90,13 @@ where
     }
 }
 
-impl<T> From<Grid<T>> for Vec<Vec<T>>
-where
-    T: Clone + Default + PartialEq + Eq + Display,
-{
+impl<T: GridDataType> From<Grid<T>> for Vec<Vec<T>> {
     fn from(grid: Grid<T>) -> Self {
         grid.as_matrix()
     }
 }
 
-impl<T> PartialEq<[T]> for Grid<T>
-where
-    T: Clone + Default + PartialEq + Eq + Display,
-{
+impl<T: GridDataType> PartialEq<[T]> for Grid<T> {
     fn eq(&self, other: &[T]) -> bool {
         self.data == other
     }
