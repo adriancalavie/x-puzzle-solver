@@ -61,6 +61,20 @@ impl PuzzleState {
         self.grid == *self.rank.get_solved()
     }
 
+    pub fn is_solvable(&self) -> bool {
+        let inversions = self.grid.count_inversions();
+
+        let is_even_rank = self.rank.is_even();
+        let has_even_inversions = inversions % 2 == 0;
+        let is_empty_tile_on_even_row = self.empty_pos.y % 2 == 0;
+
+        if !is_even_rank {
+            return has_even_inversions;
+        }
+
+        is_empty_tile_on_even_row != has_even_inversions
+    }
+
     fn try_move(&self, pos: Position, dir: Direction) -> Option<Position> {
         let new_pos = (pos + dir.offset())?;
         let rank = self.rank.into();
@@ -314,6 +328,37 @@ mod tests {
 
             state.move_empty_tile_to(Direction::RIGHT);
             assert!(state.is_solved())
+        }
+    }
+
+    #[cfg(test)]
+    mod solveable {
+        use super::*;
+
+        #[test]
+        fn should_be_solveable() {
+            let state = PuzzleState::new(vec![
+                vec![6, 13, 7, 10],
+                vec![8, 9, 11, 0],
+                vec![15, 2, 12, 5],
+                vec![14, 3, 1, 4],
+            ])
+            .unwrap();
+
+            assert!(state.is_solvable());
+        }
+
+        #[test]
+        fn should_not_be_solveable() {
+            let state = PuzzleState::new(vec![
+                vec![3, 9, 1, 15],
+                vec![14, 11, 4, 6],
+                vec![13, 0, 10, 12],
+                vec![2, 7, 8, 5],
+            ])
+            .unwrap();
+
+            assert_eq!(state.is_solvable(), false);
         }
     }
 }

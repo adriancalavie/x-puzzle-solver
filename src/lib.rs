@@ -79,6 +79,10 @@ impl Rank {
     pub fn get_solved(&self) -> &'static [i32] {
         SOLVED_CACHE[self].get_or_init(|| self.compute_solved())
     }
+
+    pub fn is_even(&self) -> bool {
+        *self as u8 % 2 == 0
+    }
 }
 
 impl std::fmt::Display for Rank {
