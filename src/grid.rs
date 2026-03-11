@@ -35,7 +35,7 @@ impl<T: GridDataType> Grid<T> {
         self.data.swap(idx_a, idx_b); // stdlib, safe, no borrow issues
     }
 
-    pub fn countInversions(&self) -> usize {
+    pub fn count_inversions(&self) -> usize {
         let mut inversions = 0;
         for (i, val) in self.data.iter().enumerate() {
             for j in i + 1..self.data.len() {
