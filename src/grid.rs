@@ -29,10 +29,13 @@ impl<T: GridDataType> Grid<T> {
         self.data[self.index(&pos)].clone()
     }
 
-    pub fn swap_values(&mut self, a: &Position, b: &Position) {
+    pub fn swap_values(&self, a: &Position, b: &Position) -> Self {
         let idx_a = self.index(a);
         let idx_b = self.index(b);
-        self.data.swap(idx_a, idx_b); // stdlib, safe, no borrow issues
+
+        let mut new_data: Vec<T> = self.data.clone();
+        new_data.swap(idx_a, idx_b);
+        Self::new(new_data, self.rank)
     }
 
     pub fn count_inversions(&self) -> usize {

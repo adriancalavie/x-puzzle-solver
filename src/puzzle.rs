@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Result, bail};
 use std::{fmt::Display, str::FromStr};
 
 use crate::{Rank, State};
@@ -6,15 +6,11 @@ use crate::{Rank, State};
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Puzzle {
     pub state: State,
-    pub previous_states: Vec<State>,
 }
 
 impl Puzzle {
     fn create(state: State) -> Result<Self> {
-        Ok(Self {
-            state,
-            previous_states: Vec::new(),
-        })
+        Ok(Self { state })
     }
 
     pub fn new(state: State) -> Result<Self> {
@@ -27,6 +23,10 @@ impl Puzzle {
 
     pub fn get_rank(&self) -> Rank {
         self.state.rank
+    }
+
+    pub fn solve(&self) -> Result<usize> {
+        bail!("Not implemented")
     }
 }
 

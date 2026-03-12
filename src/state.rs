@@ -1,5 +1,5 @@
 use anyhow::{Result, anyhow, bail};
-use std::{collections::HashSet, fmt::Display, str::FromStr};
+use std::{collections::HashSet, fmt::Display, rc::Rc, str::FromStr};
 
 use crate::{Direction, Grid, Position, Rank};
 
@@ -10,6 +10,8 @@ pub struct State {
     pub cost_so_far: i32,
     pub move_counter: usize,
     pub rank: Rank,
+    pub previous: Option<Rc<State>>,
+    pub previous_move: Option<Direction>,
     grid: Grid<i32>,
     empty_pos: Position,
 }
@@ -40,21 +42,30 @@ impl State {
         let empty_pos = extract_empty_tile(&matrix, inferred_rank)?;
 
         Ok(Self {
-            grid: matrix.into(),
             cost_so_far: 0,
             move_counter: 0,
             rank: inferred_rank,
+            previous: None,
+            previous_move: None,
+            grid: matrix.into(),
             empty_pos,
         })
     }
 
-    pub fn move_empty_tile_to(&mut self, direction: Direction) {
+    pub fn move_empty_tile_to(&self, direction: Direction) -> Option<Self> {
         let Some(new_pos) = self.try_move(self.empty_pos, direction) else {
-            return;
+            return None;
         };
-        self.grid.swap_values(&self.empty_pos, &new_pos);
-        self.empty_pos = new_pos;
-        self.move_counter += 1;
+
+        Some(Self {
+            cost_so_far: self.cost_so_far, // TODO implement cost
+            move_counter: self.move_counter + 1,
+            rank: self.rank,
+            previous: Some(Rc::new(self.clone())),
+            previous_move: Some(direction),
+            grid: self.grid.swap_values(&self.empty_pos, &new_pos),
+            empty_pos: new_pos,
+        })
     }
 
     pub fn is_solved(&self) -> bool {
@@ -274,35 +285,44 @@ mod tests {
 
         #[test]
         fn move_empty_tile() {
-            let mut state = State::from_str("0 1 2\n3 4 5\n6 7 8").unwrap();
+            let state = State::from_str("0 1 2\n3 4 5\n6 7 8").unwrap();
 
-            state.move_empty_tile_to(Direction::Down);
-            assert_eq!(state.empty_pos, Position::new(0, 1));
-            assert_eq!(state.grid.at(Position::new(0, 0)), 3);
-            assert_eq!(state.move_counter, 1);
+            let mut new_state = state
+                .move_empty_tile_to(Direction::Down)
+                .expect("Failed to move");
 
-            state.move_empty_tile_to(Direction::Right);
-            assert_eq!(state.empty_pos, Position::new(1, 1));
-            assert_eq!(state.grid.at(Position::new(0, 1)), 4);
-            assert_eq!(state.move_counter, 2);
+            assert_eq!(new_state.empty_pos, Position::new(0, 1));
+            assert_eq!(new_state.grid.at(Position::new(0, 0)), 3);
+            assert_eq!(new_state.move_counter, 1);
 
-            state.move_empty_tile_to(Direction::Right);
-            assert_eq!(state.empty_pos, Position::new(2, 1));
-            assert_eq!(state.grid.at(Position::new(1, 1)), 5);
-            assert_eq!(state.move_counter, 3);
+            new_state = new_state
+                .move_empty_tile_to(Direction::Right)
+                .expect("Failed to move");
+            assert_eq!(new_state.empty_pos, Position::new(1, 1));
+            assert_eq!(new_state.grid.at(Position::new(0, 1)), 4);
+            assert_eq!(new_state.move_counter, 2);
+
+            new_state = new_state
+                .move_empty_tile_to(Direction::Right)
+                .expect("Failed to move");
+            assert_eq!(new_state.empty_pos, Position::new(2, 1));
+            assert_eq!(new_state.grid.at(Position::new(1, 1)), 5);
+            assert_eq!(new_state.move_counter, 3);
         }
 
         #[test]
-        fn out_of_bounds_move_does_nothing() {
-            let mut state = State::from_str("0 1 2\n3 4 5\n6 7 8").unwrap();
+        fn out_of_bounds_move_returns_none() {
+            let state = State::from_str("0 1 2\n3 4 5\n6 7 8").unwrap();
 
-            state.move_empty_tile_to(Direction::Left);
+            let mut new_state = state.move_empty_tile_to(Direction::Left);
             assert_eq!(state.empty_pos, Position::new(0, 0));
             assert_eq!(state.move_counter, 0);
+            assert_eq!(new_state, None);
 
-            state.move_empty_tile_to(Direction::Up);
+            new_state = state.move_empty_tile_to(Direction::Up);
             assert_eq!(state.empty_pos, Position::new(0, 0));
             assert_eq!(state.move_counter, 0);
+            assert_eq!(new_state, None)
         }
     }
 
@@ -324,10 +344,12 @@ mod tests {
 
         #[test]
         fn is_true_after_move() {
-            let mut state = State::from_str("1 2 3\n4 5 6\n7 0 8").unwrap();
+            let state = State::from_str("1 2 3\n4 5 6\n7 0 8").unwrap();
 
-            state.move_empty_tile_to(Direction::Right);
-            assert!(state.is_solved())
+            let moved = state.move_empty_tile_to(Direction::Right);
+            assert_eq!(state.is_solved(), false);
+            assert!(moved.is_some());
+            assert!(moved.unwrap().is_solved())
         }
     }
 
