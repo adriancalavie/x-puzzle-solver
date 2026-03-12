@@ -1,9 +1,4 @@
-pub(crate) mod direction;
-pub(crate) mod distance;
-pub(crate) mod grid;
-pub(crate) mod offset;
-pub(crate) mod position;
-pub(crate) mod state;
+pub(crate) mod concepts;
 pub(crate) mod utils;
 
 pub mod puzzle;
@@ -12,8 +7,8 @@ pub mod rank;
 pub use puzzle::Puzzle;
 pub use rank::Rank;
 
-pub(crate) use direction::Direction;
-pub(crate) use grid::Grid;
-pub(crate) use offset::Offset;
-pub(crate) use position::Position;
-pub(crate) use state::State;
+pub(crate) use concepts::direction::Direction;
+pub(crate) use concepts::grid::Grid;
+pub(crate) use concepts::offset::Offset;
+pub(crate) use concepts::position::Position;
+pub(crate) use concepts::state::State;

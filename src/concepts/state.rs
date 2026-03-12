@@ -1,23 +1,23 @@
 use anyhow::{Result, anyhow, bail};
 use std::{collections::HashSet, fmt::Display, rc::Rc, str::FromStr};
 
-use crate::{Direction, Grid, Position, Rank};
+use crate::{Direction, Grid, Position, Rank, concepts::distance::manhattan_sum};
 
-const EMPTY_SYMBOL: i32 = 0;
+const EMPTY_SYMBOL: u8 = 0;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct State {
-    pub cost_so_far: i32,
+    pub cost_so_far: usize,
     pub move_counter: usize,
     pub rank: Rank,
     pub previous: Option<Rc<State>>,
     pub previous_move: Option<Direction>,
-    grid: Grid<i32>,
+    grid: Grid,
     empty_pos: Position,
 }
 
 impl State {
-    pub fn new(matrix: Vec<Vec<i32>>) -> Result<Self> {
+    pub fn new(matrix: Vec<Vec<u8>>) -> Result<Self> {
         if is_any_empty(&matrix) {
             bail!("Matrix is empty or has empty rows.");
         }
@@ -54,14 +54,15 @@ impl State {
 
     pub fn move_empty_tile_to(&self, direction: Direction) -> Option<Self> {
         let new_pos = self.try_move(self.empty_pos, direction)?;
+        let new_grid = self.grid.swap_values(&self.empty_pos, &new_pos);
 
         Some(Self {
-            cost_so_far: self.cost_so_far, // TODO implement cost
+            cost_so_far: self.move_counter + manhattan_sum(&new_grid),
             move_counter: self.move_counter + 1,
             rank: self.rank,
             previous: Some(Rc::new(self.clone())),
             previous_move: Some(direction),
-            grid: self.grid.swap_values(&self.empty_pos, &new_pos),
+            grid: new_grid,
             empty_pos: new_pos,
         })
     }
@@ -115,16 +116,16 @@ impl FromStr for State {
             .lines()
             .map(|line| {
                 line.split(' ')
-                    .map(|c| c.parse::<i32>().map_err(|_| anyhow!("Invalid character")))
-                    .collect::<Result<Vec<i32>>>()
+                    .map(|c| c.parse::<u8>().map_err(|_| anyhow!("Invalid character")))
+                    .collect::<Result<Vec<u8>>>()
             })
-            .collect::<Result<Vec<Vec<i32>>>>()?;
+            .collect::<Result<Vec<Vec<u8>>>>()?;
 
         State::new(matrix)
     }
 }
 
-fn extract_empty_tile(matrix: &[Vec<i32>], rank: Rank) -> Result<Position> {
+fn extract_empty_tile(matrix: &[Vec<u8>], rank: Rank) -> Result<Position> {
     let rank_usize = usize::from(rank);
 
     matrix
@@ -145,7 +146,7 @@ fn extract_empty_tile(matrix: &[Vec<i32>], rank: Rank) -> Result<Position> {
         .ok_or_else(|| anyhow!("Empty tile couldn't be found in the matrix"))
 }
 
-fn is_any_empty(matrix: &[Vec<i32>]) -> bool {
+fn is_any_empty(matrix: &[Vec<u8>]) -> bool {
     if matrix.is_empty() {
         return true;
     }
@@ -158,7 +159,7 @@ fn is_any_empty(matrix: &[Vec<i32>]) -> bool {
     false
 }
 
-fn is_square(matrix: &[Vec<i32>]) -> bool {
+fn is_square(matrix: &[Vec<u8>]) -> bool {
     let lines_count = matrix.len();
     for line in matrix {
         if line.len() != lines_count {
@@ -172,7 +173,7 @@ fn is_square(matrix: &[Vec<i32>]) -> bool {
 /// Checks if:
 ///  - all elements are between zero and (flat_matrix_size - 1)
 ///  - appear at most once (actually, only once)
-fn has_valid_cells(matrix: &[Vec<i32>]) -> bool {
+fn has_valid_cells(matrix: &[Vec<u8>]) -> bool {
     let flat_size = matrix.iter().map(|r| r.len()).sum::<usize>();
     let mut seen = HashSet::with_capacity(flat_size);
 
@@ -189,7 +190,7 @@ fn has_valid_cells(matrix: &[Vec<i32>]) -> bool {
     seen.len() == flat_size
 }
 
-fn rank_matches_matrix(matrix: &[Vec<i32>], rank: usize) -> Result<bool> {
+fn rank_matches_matrix(matrix: &[Vec<u8>], rank: usize) -> Result<bool> {
     let row_count = matrix.len();
     let col_count = matrix.first().unwrap().len();
 
@@ -379,6 +380,20 @@ mod tests {
             .unwrap();
 
             assert_eq!(state.is_solvable(), false);
+        }
+    }
+
+    #[cfg(test)]
+    mod heuristics {
+        use super::*;
+
+        #[test]
+        fn manhattan_sum_simple() {
+            let unsolved = State::new(vec![vec![1, 2, 3], vec![4, 5, 6], vec![7, 0, 8]]).unwrap();
+            assert_eq!(manhattan_sum(&unsolved.grid), 2);
+
+            let solved = unsolved.move_empty_tile_to(Direction::Right).unwrap();
+            assert_eq!(manhattan_sum(&solved.grid), 0);
         }
     }
 }

@@ -17,7 +17,7 @@ impl Puzzle {
         Self::create(state)
     }
 
-    pub fn from_matrix(matrix: Vec<Vec<i32>>) -> Result<Self> {
+    pub fn from_matrix(matrix: Vec<Vec<u8>>) -> Result<Self> {
         Self::new(State::new(matrix)?)
     }
 

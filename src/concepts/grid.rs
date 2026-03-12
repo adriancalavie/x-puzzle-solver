@@ -2,22 +2,20 @@ use std::fmt::Display;
 
 use crate::Position;
 
-pub trait GridDataType: Clone + Default + Ord + Display {}
-impl<T: Clone + Default + Ord + Display> GridDataType for T {}
-
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Grid<T: GridDataType> {
-    data: Vec<T>,
-    rank: usize,
+pub struct Grid {
+    data: Vec<u8>,
+    pub(super) rank: usize,
 }
 
-impl<T: GridDataType> Grid<T> {
-    pub fn new(cells: Vec<T>, rank: usize) -> Self {
+impl Grid {
+    pub fn new(cells: Vec<u8>, rank: usize) -> Self {
         Self { data: cells, rank }
     }
 
-    pub fn as_matrix(&self) -> Vec<Vec<T>> {
-        let mut matrix = vec![vec![T::default(); self.rank]; self.rank];
+    pub fn as_matrix(&self) -> Vec<Vec<u8>> {
+        let mut matrix = vec![vec![0; self.rank]; self.rank];
+
         for (idx, val) in self.data.iter().enumerate() {
             let pos = self.index_to_pos(idx);
             matrix[pos.y][pos.x] = val.clone();
@@ -25,7 +23,7 @@ impl<T: GridDataType> Grid<T> {
         matrix
     }
 
-    pub fn at(&self, pos: Position) -> T {
+    pub fn at(&self, pos: Position) -> u8 {
         self.data[self.index(&pos)].clone()
     }
 
@@ -33,7 +31,7 @@ impl<T: GridDataType> Grid<T> {
         let idx_a = self.index(a);
         let idx_b = self.index(b);
 
-        let mut new_data: Vec<T> = self.data.clone();
+        let mut new_data: Vec<u8> = self.data.clone();
         new_data.swap(idx_a, idx_b);
         Self::new(new_data, self.rank)
     }
@@ -42,12 +40,10 @@ impl<T: GridDataType> Grid<T> {
         let mut inversions = 0;
         for (i, val) in self.data.iter().enumerate() {
             for j in i + 1..self.data.len() {
-                if *val == T::default() {
-                    // not zero
+                if *val == 0 {
                     continue;
                 }
-                if self.data[j] == T::default() {
-                    // not zero
+                if self.data[j] == 0 {
                     continue;
                 }
                 if self.data[j] < *val {
@@ -58,11 +54,15 @@ impl<T: GridDataType> Grid<T> {
         inversions
     }
 
-    fn index(&self, pos: &Position) -> usize {
+    pub fn get_data(&self) -> &Vec<u8> {
+        &self.data
+    }
+
+    pub fn index(&self, pos: &Position) -> usize {
         pos.y * self.rank + pos.x
     }
 
-    fn index_to_pos(&self, idx: usize) -> Position {
+    pub fn index_to_pos(&self, idx: usize) -> Position {
         Position {
             x: idx % self.rank,
             y: idx / self.rank,
@@ -70,7 +70,7 @@ impl<T: GridDataType> Grid<T> {
     }
 }
 
-impl<T: GridDataType> Display for Grid<T> {
+impl Display for Grid {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for row in &self.as_matrix() {
             for cell in row {
@@ -82,8 +82,8 @@ impl<T: GridDataType> Display for Grid<T> {
     }
 }
 
-impl<T: GridDataType> From<Vec<Vec<T>>> for Grid<T> {
-    fn from(matrix: Vec<Vec<T>>) -> Self {
+impl From<Vec<Vec<u8>>> for Grid {
+    fn from(matrix: Vec<Vec<u8>>) -> Self {
         let rank = matrix.len();
 
         Self {
@@ -93,14 +93,14 @@ impl<T: GridDataType> From<Vec<Vec<T>>> for Grid<T> {
     }
 }
 
-impl<T: GridDataType> From<Grid<T>> for Vec<Vec<T>> {
-    fn from(grid: Grid<T>) -> Self {
+impl From<Grid> for Vec<Vec<u8>> {
+    fn from(grid: Grid) -> Self {
         grid.as_matrix()
     }
 }
 
-impl<T: GridDataType> PartialEq<[T]> for Grid<T> {
-    fn eq(&self, other: &[T]) -> bool {
+impl PartialEq<[u8]> for Grid {
+    fn eq(&self, other: &[u8]) -> bool {
         self.data == other
     }
 }

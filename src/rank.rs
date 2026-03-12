@@ -1,4 +1,4 @@
-use crate::utils::SOLVED_CACHE;
+use crate::{Position, utils::SOLVED_CACHE};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(u8)]
@@ -10,17 +10,36 @@ pub enum Rank {
 }
 
 impl Rank {
-    fn compute_solved(&self) -> Vec<i32> {
+    fn compute_solved(&self) -> Vec<u8> {
         let size = usize::from(self).pow(2);
         (1..=size)
-            .map(|i| if i == size { 0 } else { i as i32 })
+            .map(|i| if i == size { 0 } else { i as u8 })
             .collect()
     }
 
     /// lazy inits, cached reads
     /// See [SOLVED_CACHE](crate::utils::SOLVED_CACHE) for details
-    pub fn get_solved(&self) -> &'static [i32] {
+    pub fn get_solved(&self) -> &'static [u8] {
         SOLVED_CACHE[self].get_or_init(|| self.compute_solved())
+    }
+
+    pub fn get_solved_empty_tile_pos(&self) -> Position {
+        let idx_pos = usize::from(self) - 1;
+        Position::new(idx_pos, idx_pos)
+    }
+
+    pub fn solved_idx_for(rank: usize, value: u8) -> usize {
+        // Solved array is [1, 2, ..., n²-1, 0], so index is value-1,
+        // except 0 which sits at the last position.
+        if value == 0 {
+            rank.pow(2) - 1
+        } else {
+            (value - 1) as usize
+        }
+    }
+
+    pub fn solved_idx(&self, value: u8) -> usize {
+        Self::solved_idx_for(usize::from(self), value)
     }
 
     pub fn is_even(&self) -> bool {
