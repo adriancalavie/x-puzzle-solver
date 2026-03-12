@@ -3,7 +3,7 @@ pub(crate) mod distance;
 pub(crate) mod grid;
 pub(crate) mod offset;
 pub(crate) mod position;
-pub(crate) mod puzzle_state;
+pub(crate) mod state;
 pub(crate) mod utils;
 
 pub mod puzzle;
@@ -16,4 +16,4 @@ pub(crate) use direction::Direction;
 pub(crate) use grid::Grid;
 pub(crate) use offset::Offset;
 pub(crate) use position::Position;
-pub(crate) use puzzle_state::PuzzleState;
+pub(crate) use state::State;

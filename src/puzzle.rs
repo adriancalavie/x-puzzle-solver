@@ -1,32 +1,28 @@
 use anyhow::Result;
 use std::{fmt::Display, str::FromStr};
 
-use crate::{PuzzleState, Rank};
+use crate::{Rank, State};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Puzzle {
-    pub state: PuzzleState,
-    pub previous_states: Vec<PuzzleState>,
+    pub state: State,
+    pub previous_states: Vec<State>,
 }
 
 impl Puzzle {
-    fn create(state: PuzzleState) -> Result<Self> {
+    fn create(state: State) -> Result<Self> {
         Ok(Self {
             state,
             previous_states: Vec::new(),
         })
     }
 
-    pub fn new(state: PuzzleState) -> Result<Self> {
+    pub fn new(state: State) -> Result<Self> {
         Self::create(state)
     }
 
     pub fn from_matrix(matrix: Vec<Vec<i32>>) -> Result<Self> {
-        Self::new(PuzzleState::new(matrix)?)
-    }
-
-    pub fn from_str(matrix: &str) -> Result<Self> {
-        Self::new(PuzzleState::from_str(matrix)?)
+        Self::new(State::new(matrix)?)
     }
 
     pub fn get_rank(&self) -> Rank {
@@ -40,5 +36,13 @@ impl Display for Puzzle {
         write!(f, "{}", self.state)?;
 
         Ok(())
+    }
+}
+
+impl FromStr for Puzzle {
+    type Err = anyhow::Error;
+
+    fn from_str(string_matrix: &str) -> Result<Self, Self::Err> {
+        Self::new(State::from_str(string_matrix)?)
     }
 }

@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use x_puzzle_solver::{Puzzle, Rank};
 
 #[test]

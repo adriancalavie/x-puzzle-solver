@@ -24,7 +24,7 @@ impl Rank {
     }
 
     pub fn is_even(&self) -> bool {
-        *self as u8 % 2 == 0
+        (*self as u8).is_multiple_of(2)
     }
 }
 
