@@ -53,9 +53,7 @@ impl State {
     }
 
     pub fn move_empty_tile_to(&self, direction: Direction) -> Option<Self> {
-        let Some(new_pos) = self.try_move(self.empty_pos, direction) else {
-            return None;
-        };
+        let new_pos = self.try_move(self.empty_pos, direction)?;
 
         Some(Self {
             cost_so_far: self.cost_so_far, // TODO implement cost
