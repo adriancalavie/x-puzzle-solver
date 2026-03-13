@@ -18,13 +18,13 @@ impl Grid {
 
         for (idx, val) in self.data.iter().enumerate() {
             let pos = self.index_to_pos(idx);
-            matrix[pos.y][pos.x] = val.clone();
+            matrix[pos.y][pos.x] = *val;
         }
         matrix
     }
 
     pub fn at(&self, pos: Position) -> u8 {
-        self.data[self.index(&pos)].clone()
+        self.data[self.index(&pos)]
     }
 
     pub fn swap_values(&self, a: &Position, b: &Position) -> Self {

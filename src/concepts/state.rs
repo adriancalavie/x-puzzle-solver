@@ -178,8 +178,8 @@ fn has_valid_cells(matrix: &[Vec<u8>]) -> bool {
     let mut seen = HashSet::with_capacity(flat_size);
 
     for cell in matrix.iter().flatten() {
-        let idx = match usize::try_from(*cell) {
-            Ok(i) if i < flat_size => i,
+        let idx = match usize::from(*cell) {
+            i if i < flat_size => i,
             _ => return false,
         };
         if !seen.insert(idx) {
