@@ -1,5 +1,6 @@
 use criterion::{Criterion, criterion_group, criterion_main};
 use std::hint::black_box;
+use std::str::FromStr;
 use x_puzzle_solver::Puzzle;
 use x_puzzle_solver::Rank;
 
@@ -40,9 +41,31 @@ fn benchmark_rank_functionality(c: &mut Criterion) {
     group.finish();
 }
 
+fn bench_solve_rank_3(c: &mut Criterion) {
+    c.bench_function("solve_puzzle_rank_3", |b| {
+        b.iter(|| {
+            let _ = Puzzle::from_str(black_box("0 1 2\n3 4 5\n6 7 8\n"))
+                .unwrap()
+                .solve();
+        });
+    });
+}
+
+fn bench_solve_rank_4(c: &mut Criterion) {
+    c.bench_function("solve_puzzle_rank_4", |b| {
+        b.iter(|| {
+            let _ = Puzzle::from_str(black_box("5 1 3 11\n2 7 8 4\n9 6 0 12\n13 15 10 14"))
+                .unwrap()
+                .solve();
+        });
+    });
+}
+
 criterion_group!(
     benches,
     benchmark_puzzle_from_string,
-    benchmark_rank_functionality
+    benchmark_rank_functionality,
+    bench_solve_rank_3,
+    bench_solve_rank_4,
 );
 criterion_main!(benches);

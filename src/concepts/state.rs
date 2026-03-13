@@ -1,5 +1,5 @@
 use anyhow::{Result, anyhow, bail};
-use std::{collections::HashSet, fmt::Display, rc::Rc, str::FromStr};
+use std::{cmp::Ordering, collections::HashSet, fmt::Display, rc::Rc, str::FromStr};
 
 use crate::{Direction, Grid, Position, Rank, concepts::distance::manhattan_sum};
 
@@ -67,22 +67,34 @@ impl State {
         })
     }
 
+    pub fn grid(&self) -> &Grid {
+        &self.grid
+    }
+
     pub fn is_solved(&self) -> bool {
         self.grid == *self.rank.get_solved()
     }
 
+    /// If the grid width is odd,
+    ///         then the number of inversions in a solvable situation is even.
+    /// If the grid width is even,
+    ///     and the blank is on an even row counting from the bottom (second-last, fourth-last etc),
+    ///         then the number of inversions in a solvable situation is odd.
+    /// If the grid width is even,
+    ///     and the blank is on an odd row counting from the bottom (last, third-last, fifth-last etc)
+    ///         then the number of inversions in a solvable situation is even.
     pub fn is_solvable(&self) -> bool {
-        let inversions = self.grid.count_inversions();
+        let inversion_count = self.grid.count_inversions();
 
-        let is_even_rank = self.rank.is_even();
-        let has_even_inversions = inversions.is_multiple_of(2);
-        let is_empty_tile_on_even_row = self.empty_pos.y.is_multiple_of(2);
-
-        if !is_even_rank {
-            return has_even_inversions;
+        if self.rank.is_odd() {
+            return inversion_count.is_multiple_of(2);
         }
 
-        is_empty_tile_on_even_row != has_even_inversions
+        if self.empty_pos.y.is_multiple_of(2) {
+            return !inversion_count.is_multiple_of(2);
+        }
+
+        inversion_count.is_multiple_of(2)
     }
 
     fn try_move(&self, pos: Position, dir: Direction) -> Option<Position> {
@@ -96,12 +108,30 @@ impl State {
     }
 }
 
+impl Ord for State {
+    fn cmp(&self, other: &Self) -> Ordering {
+        other
+            .cost_so_far
+            .cmp(&self.cost_so_far)
+            .then_with(|| self.move_counter.cmp(&other.move_counter))
+    }
+}
+
+impl PartialOrd for State {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
 impl Display for State {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", &self.grid)?;
         writeln!(f, "Rank: {}", &self.rank)?;
         writeln!(f, "Cost so far: {}", &self.cost_so_far)?;
         writeln!(f, "Empty tile: {}", &self.empty_pos)?;
+        if let Some(direction) = self.previous_move {
+            writeln!(f, "Previous move: {}", direction)?;
+        }
         write!(f, "Move counter: {}", &self.move_counter)?;
 
         std::result::Result::Ok(())
@@ -359,27 +389,34 @@ mod tests {
         #[test]
         fn should_be_solveable() {
             let state = State::new(vec![
-                vec![6, 13, 7, 10],
-                vec![8, 9, 11, 0],
-                vec![15, 2, 12, 5],
-                vec![14, 3, 1, 4],
+                vec![5, 1, 3, 11],
+                vec![2, 7, 8, 4],
+                vec![9, 6, 0, 12],
+                vec![13, 15, 10, 14],
             ])
             .unwrap();
-
             assert!(state.is_solvable());
         }
 
         #[test]
         fn should_not_be_solveable() {
-            let state = State::new(vec![
+            let state1 = State::new(vec![
                 vec![3, 9, 1, 15],
                 vec![14, 11, 4, 6],
                 vec![13, 0, 10, 12],
                 vec![2, 7, 8, 5],
             ])
             .unwrap();
+            let state2 = State::new(vec![
+                vec![0, 1, 2, 3],
+                vec![4, 5, 6, 7],
+                vec![8, 9, 10, 11],
+                vec![12, 13, 14, 15],
+            ])
+            .unwrap();
 
-            assert_eq!(state.is_solvable(), false);
+            assert_eq!(state1.is_solvable(), false);
+            assert_eq!(state2.is_solvable(), false);
         }
     }
 

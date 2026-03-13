@@ -45,6 +45,10 @@ impl Rank {
     pub fn is_even(&self) -> bool {
         (*self as u8).is_multiple_of(2)
     }
+
+    pub fn is_odd(&self) -> bool {
+        !self.is_even()
+    }
 }
 
 impl std::fmt::Display for Rank {

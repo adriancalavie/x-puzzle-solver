@@ -1,6 +1,10 @@
+use std::fmt::Display;
+
+use strum_macros::EnumIter;
+
 use crate::Offset;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(EnumIter, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Direction {
     Up,
     Down,
@@ -15,6 +19,17 @@ impl Direction {
             Direction::Down => Offset { dx: 0, dy: 1 },
             Direction::Left => Offset { dx: -1, dy: 0 },
             Direction::Right => Offset { dx: 1, dy: 0 },
+        }
+    }
+}
+
+impl Display for Direction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Direction::Up => write!(f, "↑"),
+            Direction::Down => write!(f, "↓"),
+            Direction::Left => write!(f, "←"),
+            Direction::Right => write!(f, "→"),
         }
     }
 }
