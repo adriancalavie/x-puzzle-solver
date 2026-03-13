@@ -1,7 +1,7 @@
 use anyhow::{Result, anyhow, bail};
 use std::{cmp::Ordering, collections::HashSet, fmt::Display, rc::Rc, str::FromStr};
 
-use crate::{Direction, Grid, Position, Rank, concepts::distance::manhattan_sum};
+use crate::{Direction, Grid, Position, Rank, concepts::heuristics::manhattan_sum};
 
 const EMPTY_SYMBOL: u8 = 0;
 

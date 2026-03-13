@@ -23,6 +23,20 @@ impl Grid {
         matrix
     }
 
+    pub fn as_rows(&self) -> Vec<Vec<u8>> {
+        self.as_matrix()
+    }
+
+    pub fn as_cols(&self) -> Vec<Vec<u8>> {
+        let mut cols = vec![vec![0; self.rank]; self.rank];
+
+        for (idx, val) in self.data.iter().enumerate() {
+            let pos = self.index_to_pos(idx);
+            cols[pos.x][pos.y] = *val;
+        }
+        cols
+    }
+
     pub fn at(&self, pos: Position) -> u8 {
         self.data[self.index(&pos)]
     }
