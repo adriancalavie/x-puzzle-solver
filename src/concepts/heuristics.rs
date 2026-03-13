@@ -17,59 +17,46 @@ pub fn linear_conflicts(grid: &Grid) -> usize {
 }
 
 fn linear_conflicts_by_row(grid: &Grid) -> usize {
-    let goal_position = |v| grid.index_to_pos(Rank::solved_idx_for(grid.rank, v));
-
-    let rows = grid.as_rows();
-    let mut conflicts = 0;
-
-    for (row_idx, row) in rows.iter().enumerate() {
-        let belong_in_this_row: Vec<&u8> = row
-            .iter()
-            .filter(|v| **v != 0 && goal_position(**v).y == row_idx)
-            .collect();
-        if belong_in_this_row.len() < 2 {
-            continue;
-        }
-        for i in 0..belong_in_this_row.len() - 1 {
-            let ix = goal_position(*belong_in_this_row[i]).x;
-            for j in i + 1..belong_in_this_row.len() {
-                let jx = goal_position(*belong_in_this_row[j]).x;
-                if jx < ix {
-                    conflicts += 1;
-                }
-            }
-        }
-    }
-
-    conflicts
+    let goal_position = |v: &u8| grid.index_to_pos(Rank::solved_idx_for(grid.rank, *v));
+    grid.as_rows()
+        .iter()
+        .enumerate()
+        .map(|(row_idx, row)| {
+            let belong: Vec<&u8> = row
+                .iter()
+                .filter(|v| **v != 0 && goal_position(v).y == row_idx)
+                .collect();
+            count_conflicts_in_line(&belong, |v| goal_position(v).x)
+        })
+        .sum()
 }
 
 fn linear_conflicts_by_col(grid: &Grid) -> usize {
-    let goal_position = |v| grid.index_to_pos(Rank::solved_idx_for(grid.rank, v));
+    let goal_position = |v: &u8| grid.index_to_pos(Rank::solved_idx_for(grid.rank, *v));
+    grid.as_cols()
+        .iter()
+        .enumerate()
+        .map(|(col_idx, col)| {
+            let belong: Vec<&u8> = col
+                .iter()
+                .filter(|v| **v != 0 && goal_position(v).x == col_idx)
+                .collect();
+            count_conflicts_in_line(&belong, |v| goal_position(v).y)
+        })
+        .sum()
+}
 
-    let cols = grid.as_cols();
-    let mut conflicts = 0;
-
-    for (col_idx, col) in cols.iter().enumerate() {
-        let belong_in_this_col: Vec<&u8> = col
-            .iter()
-            .filter(|v| **v != 0 && goal_position(**v).x == col_idx)
-            .collect();
-        if belong_in_this_col.len() < 2 {
-            continue;
-        }
-        for i in 0..belong_in_this_col.len() - 1 {
-            let iy = goal_position(*belong_in_this_col[i]).y;
-            for j in i + 1..belong_in_this_col.len() {
-                let jy = goal_position(*belong_in_this_col[j]).y;
-                if jy < iy {
-                    conflicts += 1;
-                }
-            }
-        }
-    }
-
-    conflicts
+fn count_conflicts_in_line(line: &[&u8], goal_axis: impl Fn(&u8) -> usize) -> usize {
+    let positions: Vec<usize> = line.iter().map(|v| goal_axis(v)).collect();
+    positions
+        .iter()
+        .enumerate()
+        .flat_map(|(i, &pos_i)| {
+            positions[i + 1..]
+                .iter()
+                .filter(move |&&pos_j| pos_j < pos_i)
+        })
+        .count()
 }
 
 #[cfg(test)]
