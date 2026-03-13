@@ -1,7 +1,10 @@
 use anyhow::{Result, anyhow, bail};
 use std::{cmp::Ordering, collections::HashSet, fmt::Display, rc::Rc, str::FromStr};
 
-use crate::{Direction, Grid, Position, Rank, concepts::heuristics::manhattan_sum};
+use crate::{
+    Direction, Grid, Position, Rank,
+    concepts::heuristics::{linear_conflicts, manhattan_sum},
+};
 
 const EMPTY_SYMBOL: u8 = 0;
 
@@ -57,7 +60,9 @@ impl State {
         let new_grid = self.grid.swap_values(&self.empty_pos, &new_pos);
 
         Some(Self {
-            cost_so_far: self.move_counter + manhattan_sum(&new_grid),
+            cost_so_far: self.move_counter
+                + manhattan_sum(&new_grid)
+                + linear_conflicts(&new_grid) * 2,
             move_counter: self.move_counter + 1,
             rank: self.rank,
             previous: Some(Rc::new(self.clone())),
